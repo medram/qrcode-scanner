@@ -4,6 +4,13 @@ from typing import Dict, Literal, Sequence, Tuple, cast
 
 import hid
 
+from qrcode_scanner.exceptions import (
+    DeviceConnectionError,
+    DeviceNotConnectedError,
+    DeviceNotFoundError,
+    UnknownCharacterError,
+)
+
 # HID Usage ID to character mapping (typical keyboard layout)
 USAGE_TO_CHAR: Dict[int, Tuple[str, str]] = {
     4: ("a", "A"),
@@ -74,14 +81,16 @@ class HIDScanner:
         self.buffer: list[str] = []
 
     def connect(self):
-        self.device = hid.device()
-        self.device.open(self.vendor_id, self.product_id)
+        try:
+            self.device = hid.device()
+            self.device.open(self.vendor_id, self.product_id)
+        except OSError as e:
+            raise DeviceConnectionError from e
 
     def read_data(self, *, buffer_size: int = 8, timeout: int = 0) -> ScanResult | None:
         """Read data from the HID device and decode it as keyboard input."""
         if not self.device:
-            print("Device not connected")
-            return None
+            raise DeviceNotFoundError("Device not found or not connected")
 
         report = cast(list[int], self.device.read(buffer_size, timeout))
         if not report:
@@ -98,8 +107,7 @@ class HIDScanner:
         shift: bool = bool(modifier & (0x02 | 0x20))
 
         if code not in USAGE_TO_CHAR:
-            print(f"[Unknown key code: {code}]")
-            return None
+            raise UnknownCharacterError(f"Unknown key code: {code}")
 
         # Get the character based on shift state
         char: str = USAGE_TO_CHAR[code][1] if shift else USAGE_TO_CHAR[code][0]
@@ -130,8 +138,7 @@ class HIDScanner:
             str | None: The complete decoded text from the QR code, or None if device is not connected
         """
         if not self.device:
-            print("Device not connected")
-            return None
+            raise DeviceNotConnectedError("Device not connected")
 
         buffer: list[str] = []
         while True:
