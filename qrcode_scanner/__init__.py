@@ -146,7 +146,7 @@ class HIDScanner:
             time.sleep(0.01)  # Reduced sleep time for better responsiveness
 
 
-def devices() -> Sequence[hid.HidDeviceInfo]:
+def devices() -> Sequence[Dict[str, int | str]]:
     """List all connected HID devices."""
     return hid.enumerate()
 
