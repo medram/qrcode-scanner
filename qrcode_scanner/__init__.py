@@ -78,7 +78,6 @@ class HIDScanner:
         self.product_id = product_id
         self.device = None
         self.status: Literal["READING", "LISTENING"] = "LISTENING"
-        self.buffer: list[str] = []
 
     def connect(self):
         try:
@@ -93,39 +92,38 @@ class HIDScanner:
             raise DeviceNotFoundError("Device not found or not connected")
 
         report = cast(list[int], self.device.read(buffer_size, timeout))
+
         if not report:
             return None
 
         # First byte contains modifier keys
         modifier: int = report[0]
-        # Third byte contains the key code
-        code: int = report[2]
-        if code == 0:
+        # Get all non-zero key codes from bytes 2-7
+        codes = [code for code in report[2:] if code != 0]
+        if not codes:
             return None
 
         # Check if either shift key is pressed (left shift = 0x02, right shift = 0x20)
         shift: bool = bool(modifier & (0x02 | 0x20))
 
-        if code not in USAGE_TO_CHAR:
-            raise UnknownCharacterError(f"Unknown key code: {code}")
-
-        # Get the character based on shift state
-        char: str = USAGE_TO_CHAR[code][1] if shift else USAGE_TO_CHAR[code][0]
+        # Process all pressed keys
+        chars = []
+        for code in codes:
+            if code not in USAGE_TO_CHAR:
+                raise UnknownCharacterError(f"Unknown key code: {code}")
+            # Get the character based on shift state
+            char: str = USAGE_TO_CHAR[code][1] if shift else USAGE_TO_CHAR[code][0]
+            chars.append(char)
 
         # Handle Enter key (code 40) as completion
-        is_complete: bool = code == 40
-        if is_complete:
-            result = ScanResult(
-                raw_data=list(report),
-                decoded_text="".join(self.buffer),
-                is_complete=True,
-            )
-            self.buffer.clear()
-            return result
+        is_complete = 40 in codes
 
-        # Add character to buffer
-        self.buffer.append(char)
-        return ScanResult(raw_data=list(report), decoded_text=char, is_complete=False)
+        # Join all characters into a single string
+        decoded_text = "".join(chars)
+
+        return ScanResult(
+            raw_data=list(report), decoded_text=decoded_text, is_complete=is_complete
+        )
 
     def close(self):
         if self.device:
@@ -140,17 +138,19 @@ class HIDScanner:
         if not self.device:
             raise DeviceNotConnectedError("Device not connected")
 
-        buffer: list[str] = []
+        buffer: list[str] = []  # Clear any previous data
         while True:
             scanned_result = self.read_data(timeout=10)
             if scanned_result:
+                # Add the character first (even if it's a completion char)
+                if not scanned_result.is_complete:
+                    buffer.append(scanned_result.decoded_text)
+
+                # Then check for completion
                 if scanned_result.is_complete:
                     final_text: str = "".join(buffer)
-                    buffer.clear()  # Clear the buffer after completion
+                    buffer.clear()  # Clear the buffer only after getting the final text
                     return final_text
-                else:
-                    buffer.append(scanned_result.decoded_text)
-            time.sleep(0.01)  # Reduced sleep time for better responsiveness
 
 
 def devices() -> Sequence[Dict[str, int | str]]:
