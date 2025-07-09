@@ -92,6 +92,20 @@ files = [
 setuptools = ">=19.0"
 
 [[package]]
+name = "pyserial"
+version = "3.5"
+description = "Python Serial Port Extension"
+optional = false
+python-versions = "*"
+files = [
+    {file = "pyserial-3.5-py2.py3-none-any.whl", hash = "sha256:c4451db6ba391ca6ca299fb3ec7bae67a5c55dde170964c7a14ceefec02f2cf0"},
+    {file = "pyserial-3.5.tar.gz", hash = "sha256:3c77e014170dfffbd816e6ffc205e9842efb10be9f58ec16d3e8675b4925cddb"},
+]
+
+[package.extras]
+cp2110 = ["hidapi"]
+
+[[package]]
 name = "setuptools"
 version = "80.8.0"
 description = "Easily download, build, install, upgrade, and uninstall Python packages"
@@ -114,4 +128,4 @@ type = ["importlib_metadata (>=7.0.2)", "jaraco.develop (>=7.21)", "mypy (==1.14
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "b8d8f4a3a52ad6dfe4fa67b2b1bf52e0b7b42e45c73670cdf027d58c6a8b0bd7"
+content-hash = "b3fc17041d251853bb7eb7cbfc7ef9c556698141213248092b5988f915a38052"

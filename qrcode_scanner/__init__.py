@@ -3,6 +3,8 @@ from dataclasses import dataclass
 from typing import Dict, Literal, Sequence, Tuple, cast
 
 import hid
+import serial
+import serial.tools.list_ports
 
 from qrcode_scanner.exceptions import (
     DeviceConnectionError,
@@ -153,9 +155,96 @@ class HIDScanner:
                     return final_text
 
 
+class SerialScanner:
+    def __init__(
+        self,
+        port: str,
+        baudrate: int = 9600,
+        parity: str = serial.PARITY_NONE,
+        stopbits: float = serial.STOPBITS_ONE,
+        bytesize: int = serial.EIGHTBITS,
+        timeout: float = 1,
+    ):
+        self.port = port
+        self.baudrate = baudrate
+        self.parity = parity
+        self.stopbits = stopbits
+        self.bytesize = bytesize
+        self.timeout = timeout
+        self.device = None
+        self.status: Literal["READING", "LISTENING"] = "LISTENING"
+
+    def connect(self):
+        """Connect to the serial device."""
+        try:
+            self.device = serial.Serial(
+                port=self.port,
+                baudrate=self.baudrate,
+                parity=self.parity,
+                stopbits=self.stopbits,
+                bytesize=self.bytesize,
+                timeout=self.timeout,
+            )
+
+            # Open the port if not already open
+            if not self.device.is_open:
+                self.device.open()
+
+        except (serial.SerialException, OSError) as e:
+            raise DeviceConnectionError(
+                f"Failed to connect to serial device: {e}"
+            ) from e
+
+    def close(self):
+        """Close the serial connection."""
+        if self.device and self.device.is_open:
+            self.device.close()
+
+    def read(self) -> str | None:
+        """Read data from the serial device until a complete line is received.
+
+        Returns:
+            str | None: The complete decoded text from the QR code, or None if device is not connected
+        """
+        if not self.device or not self.device.is_open:
+            raise DeviceNotConnectedError("Device not connected")
+
+        try:
+            # Read a line ending with '\n' (adjust if your device uses different line endings)
+            data = self.device.readline()
+            if data:
+                # Decode bytes to string and strip whitespace
+                decoded_text = data.decode("utf-8").strip()
+                return decoded_text if decoded_text else None
+            return None
+        except (serial.SerialException, UnicodeDecodeError) as e:
+            raise DeviceConnectionError(f"Error reading from serial device: {e}") from e
+
+    def read_raw(self) -> bytes | None:
+        """Read raw bytes from the serial device.
+
+        Returns:
+            bytes | None: Raw data from the device, or None if no data available
+        """
+        if not self.device or not self.device.is_open:
+            raise DeviceNotConnectedError("Device not connected")
+
+        try:
+            data = self.device.readline()
+            return data if data else None
+        except serial.SerialException as e:
+            raise DeviceConnectionError(f"Error reading from serial device: {e}") from e
+
+
 def devices() -> Sequence[Dict[str, int | str]]:
     """List all connected HID devices."""
     return hid.enumerate()
 
 
-__all__ = ["HIDScanner", "ScanResult", "devices"]
+def serial_ports() -> list[str]:
+    """List all available serial ports."""
+    ports = serial.tools.list_ports.comports()
+    return [port.device for port in ports]
+
+
+__all__ = ["HIDScanner", "SerialScanner", "ScanResult", "devices", "serial_ports"]

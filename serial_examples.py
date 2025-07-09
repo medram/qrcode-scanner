@@ -12,7 +12,7 @@ if not ports:
     exit(1)
 
 # Configure the serial connection (adjust parameters as needed)
-port = "/dev/ttyACM0"  # or '/dev/ttyS0' on Linux, 'COM3' on Windows
+port = "/dev/ttyACM0"  # or use ports[0] to use the first available port
 baudrate = 9600
 
 try:
@@ -25,10 +25,10 @@ try:
     print(f"Connected to serial device on {port}")
 
     while True:
+        print("Waiting for data...")
         try:
-            print("Waiting for data...")
-            # Read data from the scanner
-            scanned_text = scanner.read()  # the read function is blocking
+            # Read data from the scanner (blocking call)
+            scanned_text = scanner.read()
             if scanned_text:
                 print("=== SCAN COMPLETE ===")
                 print("Scanned text:", scanned_text)

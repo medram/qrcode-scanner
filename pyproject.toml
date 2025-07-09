@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "qrcode-scanner"
-version = "0.0.3"
+version = "0.0.4"
 description = "Read QR codes from HID devices"
 authors = ["medram <mramouchy@gmail.com>"]
 readme = "README.md"
@@ -14,6 +14,7 @@ keywords = ["Qr Code", "qr code scanner", "hid", "usb qr code scanner", "qrcode 
 [tool.poetry.dependencies]
 python = "^3.10"
 hidapi = "^0.14.0.post4"
+pyserial = "^3.5"
 
 
 [build-system]
